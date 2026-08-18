@@ -1,0 +1,353 @@
+================================================================================
+  HAL YÖNETİM SİSTEMİ — VERİTABANI ŞEMASI
+  Veritabanı: Supabase PostgreSQL
+  Dosya kaynağı: supabase/schema.sql
+================================================================================
+
+
+1. GENEL BAKIŞ
+--------------------------------------------------------------------------------
+
+Toplam tablo sayısı : 5
+Toplam indeks sayısı: 5
+RLS (Row Level Security): Tüm tablolarda aktif
+
+Tablolar:
+  - halciler   → Sistem kullanıcıları (halci / hal esnafı)
+  - ciftciler  → Halci'ye bağlı çiftçi kayıtları
+  - urunler    → Çiftçi ürünleri ve stok bilgileri
+  - satislar   → Satış geçmişi ve fatura verileri
+  - talepler   → Halci-halci arası ürün satın alma talepleri
+
+
+2. TABLO İLİŞKİLERİ
+--------------------------------------------------------------------------------
+
+halciler (1) ──────< (N) ciftciler          [ciftciler.halci_id]
+ciftciler (1) ──────< (N) urunler            [urunler.ciftci_id, CASCADE delete]
+halciler (1) ──────< (N) satislar            [satislar.halci_id]
+halciler (1) ──────< (N) satislar            [satislar.alici_halci_id]
+ciftciler (1) ──────< (N) satislar           [satislar.ciftci_id]
+urunler (1) ────────< (N) satislar           [satislar.urun_id]
+halciler (1) ──────< (N) talepler           [talepler.alici_halci_id]
+halciler (1) ──────< (N) talepler           [talepler.satici_halci_id]
+urunler (1) ────────< (N) talepler           [talepler.urun_id]
+
+
+3. TABLO: halciler
+--------------------------------------------------------------------------------
+Açıklama: Sisteme giriş yapan halci (toptancı) kullanıcıları.
+
+Sütun Adı          | Veri Tipi | Kısıt                    | Açıklama
+-------------------|-----------|--------------------------|---------------------------
+id                 | bigint    | PK, identity             | Otomatik artan birincil anahtar
+ad                 | text      | NOT NULL                 | Halci adı
+soyad              | text      | NOT NULL                 | Halci soyadı
+email              | text      | NOT NULL, UNIQUE         | Giriş e-posta adresi
+sifre              | text      | NOT NULL                 | Şifre (düz metin)
+vergi_numarasi     | text      | NOT NULL, UNIQUE         | 10 haneli vergi numarası
+telefon            | text      |                          | Telefon numarası
+adres              | text      |                          | Adres
+sirket_adi         | text      |                          | Firma / şirket unvanı
+kayit_tarihi       | date      | DEFAULT current_date     | Kayıt tarihi
+aktif              | boolean   | DEFAULT true             | Hesap aktif mi
+
+
+4. TABLO: ciftciler
+--------------------------------------------------------------------------------
+Açıklama: Bir halciye bağlı çiftçi profilleri.
+
+Sütun Adı          | Veri Tipi | Kısıt                    | Açıklama
+-------------------|-----------|--------------------------|---------------------------
+id                 | bigint    | PK, identity             | Otomatik artan birincil anahtar
+halci_id           | bigint    | FK → halciler(id)        | Hangi halciye ait (ON DELETE SET NULL)
+ad_soyad           | text      | NOT NULL                 | Çiftçi adı soyadı
+telefon            | text      |                          | Telefon numarası
+adres              | text      |                          | Adres
+tc_kimlik          | text      |                          | TC kimlik numarası
+kayit_tarihi       | date      | DEFAULT current_date     | Kayıt tarihi
+aktif              | boolean   | DEFAULT true             | Aktif / pasif durumu
+notlar             | text      |                          | Serbest not alanı
+
+Not: Talep onayında alıcı halcinin stoğuna ürün eklemek için otomatik
+     "Stok Yönetimi" adlı sanal çiftçi kaydı oluşturulabilir.
+
+
+5. TABLO: urunler
+--------------------------------------------------------------------------------
+Açıklama: Çiftçilere ait ürün ve stok kayıtları.
+
+Sütun Adı          | Veri Tipi | Kısıt                    | Açıklama
+-------------------|-----------|--------------------------|---------------------------
+id                 | bigint    | PK, identity             | Otomatik artan birincil anahtar
+ciftci_id          | bigint    | FK → ciftciler(id)       | Hangi çiftçiye ait (ON DELETE CASCADE)
+urun_adi           | text      | NOT NULL                 | Ürün adı
+urun_tipi          | text      |                          | Sebze veya Meyve
+miktar             | numeric   |                          | Stok miktarı
+birim              | text      |                          | kg, adet vb.
+fiyat              | numeric   |                          | Birim fiyat (TL)
+gelis_tarihi       | date      |                          | Ürünün hale geliş tarihi
+son_kullanim_tarihi| date      |                          | Son kullanma tarihi (SKT)
+kalite             | text      |                          | A Sınıfı, B Sınıfı, C Sınıfı
+notlar             | text      |                          | Serbest not
+durum              | text      | DEFAULT 'Beklemede'      | Beklemede, Onaylandı, Reddedildi, Tedarik Edildi
+
+
+6. TABLO: satislar
+--------------------------------------------------------------------------------
+Açıklama: Doğrudan satış ve talep onayı sonrası oluşan satış kayıtları.
+          Fatura indirme işlemi bu tablodan beslenir.
+
+Sütun Adı          | Veri Tipi | Kısıt                    | Açıklama
+-------------------|-----------|--------------------------|---------------------------
+id                 | bigint    | PK, identity             | Otomatik artan birincil anahtar
+halci_id           | bigint    | FK → halciler(id)        | Satıcı halci (ON DELETE CASCADE)
+ciftci_id          | bigint    | FK → ciftciler(id)       | İlgili çiftçi (ON DELETE SET NULL)
+urun_id            | bigint    | FK → urunler(id)         | İlgili ürün (ON DELETE SET NULL)
+urun_adi           | text      |                          | Ürün adı (anlık kopya)
+miktar             | numeric   |                          | Satılan miktar
+birim              | text      |                          | Birim
+fiyat              | numeric   |                          | Birim fiyat
+kalite             | text      |                          | Kalite sınıfı
+birim_fiyat        | numeric   |                          | Talep onayında kabul edilen birim fiyat
+toplam_tutar       | numeric   |                          | Toplam satış tutarı
+satis_tarihi       | date      |                          | Satış tarihi
+satis_saati        | text      |                          | Satış saati
+durum              | text      |                          | Tamamlandı vb.
+alici_halci_id     | bigint    | FK → halciler(id)        | Halci-halci alıcı (ON DELETE SET NULL)
+alici_sirket_adi   | text      |                          | Alıcı şirket adı
+fiyat_teklifi      | numeric   |                          | Alıcının fiyat teklifi
+satici_fiyati      | numeric   |                          | Satıcının orijinal fiyatı
+sirket_adi         | text      |                          | Alıcı firma unvanı
+sirket_telefon     | text      |                          | Alıcı firma telefonu
+sirket_adres       | text      |                          | Alıcı firma adresi
+sirket_vergi_no    | text      |                          | Alıcı firma vergi numarası
+tarih              | timestamptz| DEFAULT now()           | Kayıt zaman damgası
+
+
+7. TABLO: talepler
+--------------------------------------------------------------------------------
+Açıklama: Bir halcinin başka bir halciden ürün satın alma talepleri.
+
+Sütun Adı              | Veri Tipi | Kısıt                | Açıklama
+-----------------------|-----------|----------------------|---------------------------
+id                     | bigint    | PK, identity         | Otomatik artan birincil anahtar
+alici_halci_id         | bigint    | FK → halciler(id)    | Talep gönderen halci (ON DELETE CASCADE)
+alici_halci_ad_soyad   | text      |                      | Alıcı halci ad soyad
+alici_sirket_adi       | text      |                      | Alıcı şirket adı
+alici_sirket_telefon   | text      |                      | Alıcı şirket telefonu
+alici_sirket_adres     | text      |                      | Alıcı şirket adresi
+alici_sirket_vergi_no  | text      |                      | Alıcı şirket vergi numarası
+satici_halci_id        | bigint    | FK → halciler(id)    | Talep alan halci (ON DELETE CASCADE)
+satici_halci_ad_soyad  | text      |                      | Satıcı halci ad soyad
+satici_sirket_adi      | text      |                      | Satıcı şirket adı
+urun_id                | bigint    | FK → urunler(id)     | Talep edilen ürün (ON DELETE SET NULL)
+urun_adi               | text      |                      | Ürün adı
+urun_tipi              | text      |                      | Sebze veya Meyve
+kalite                 | text      |                      | Kalite sınıfı
+miktar                 | numeric   |                      | Talep edilen miktar
+birim                  | text      |                      | Birim
+birim_fiyat            | numeric   |                      | Satıcının birim fiyatı
+fiyat_teklifi          | numeric   |                      | Alıcının fiyat teklifi
+toplam_tutar           | numeric   |                      | Toplam tutar
+notlar                 | text      |                      | Talep notları
+durum                  | text      | DEFAULT 'Beklemede'  | Beklemede, Onaylandı, Reddedildi
+talep_tarihi           | date      |                      | Talep tarihi
+talep_saati            | text      |                      | Talep saati
+onay_tarihi            | date      |                      | Onay tarihi
+onay_saati             | text      |                      | Onay saati
+
+
+8. İNDEKSLER
+--------------------------------------------------------------------------------
+
+idx_ciftciler_halci_id         → ciftciler(halci_id)
+idx_urunler_ciftci_id          → urunler(ciftci_id)
+idx_satislar_halci_id          → satislar(halci_id)
+idx_talepler_satici_halci_id   → talepler(satici_halci_id)
+idx_talepler_alici_halci_id    → talepler(alici_halci_id)
+
+
+9. ROW LEVEL SECURITY (RLS)
+--------------------------------------------------------------------------------
+
+Tüm tablolarda RLS etkinleştirilmiştir.
+Geliştirme ortamında aşağıdaki açık politikalar tanımlıdır:
+
+  halciler_all   → halciler   tablosu (SELECT, INSERT, UPDATE, DELETE)
+  ciftciler_all  → ciftciler  tablosu (SELECT, INSERT, UPDATE, DELETE)
+  urunler_all    → urunler    tablosu (SELECT, INSERT, UPDATE, DELETE)
+  satislar_all   → satislar   tablosu (SELECT, INSERT, UPDATE, DELETE)
+  talepler_all   → talepler   tablosu (SELECT, INSERT, UPDATE, DELETE)
+
+Politika koşulu: using (true) with check (true)
+Not: Üretim ortamında Supabase Auth ile kullanıcı bazlı kısıtlama önerilir.
+
+
+10. FRONTEND ↔ VERİTABANI ALAN EŞLEMESİ
+--------------------------------------------------------------------------------
+
+Vue uygulamasında alan adları camelCase, veritabanında snake_case kullanılır.
+Dönüşüm dosyası: src/utils/dbMapping.js
+
+Veritabanı (snake_case)     | Vue (camelCase)
+----------------------------|------------------
+halci_id                    | halciId
+ad_soyad                    | adSoyad
+urun_adi                    | urunAdi
+urun_tipi                   | urunTipi
+vergi_numarasi              | vergiNumarasi
+sirket_adi                  | sirketAdi
+kayit_tarihi                | kayitTarihi
+tc_kimlik                   | tcKimlik
+gelis_tarihi                | gelisTarihi
+son_kullanim_tarihi         | sonKullanimTarihi
+ciftci_id                   | ciftciId
+birim_fiyat                 | birimFiyat
+toplam_tutar                | toplamTutar
+satis_tarihi                | satisTarihi
+satis_saati                 | satisSaati
+alici_halci_id              | aliciHalciId
+alici_sirket_adi            | aliciSirketAdi
+fiyat_teklifi               | fiyatTeklifi
+satici_fiyati               | saticiFiyati
+sirket_vergi_no             | sirketVergiNo
+alici_halci_ad_soyad        | aliciHalciAdSoyad
+satici_halci_id             | saticiHalciId
+satici_halci_ad_soyad       | saticiHalciAdSoyad
+satici_sirket_adi           | saticiSirketAdi
+talep_tarihi                | talepTarihi
+talep_saati                 | talepSaati
+onay_tarihi                 | onayTarihi
+onay_saati                  | onaySaati
+
+
+11. TAM SQL ŞEMASI (schema.sql)
+--------------------------------------------------------------------------------
+
+-- Hal Yönetim Sistemi - Supabase veritabanı şeması
+-- Supabase Dashboard > SQL Editor içinde bu dosyayı çalıştırın.
+
+create table if not exists public.halciler (
+  id bigint generated by default as identity primary key,
+  ad text not null,
+  soyad text not null,
+  email text not null unique,
+  sifre text not null,
+  vergi_numarasi text not null unique,
+  telefon text,
+  adres text,
+  sirket_adi text,
+  kayit_tarihi date default current_date,
+  aktif boolean default true
+);
+
+create table if not exists public.ciftciler (
+  id bigint generated by default as identity primary key,
+  halci_id bigint references public.halciler(id) on delete set null,
+  ad_soyad text not null,
+  telefon text,
+  adres text,
+  tc_kimlik text,
+  kayit_tarihi date default current_date,
+  aktif boolean default true,
+  notlar text
+);
+
+create table if not exists public.urunler (
+  id bigint generated by default as identity primary key,
+  ciftci_id bigint references public.ciftciler(id) on delete cascade,
+  urun_adi text not null,
+  urun_tipi text,
+  miktar numeric,
+  birim text,
+  fiyat numeric,
+  gelis_tarihi date,
+  son_kullanim_tarihi date,
+  kalite text,
+  notlar text,
+  durum text default 'Beklemede'
+);
+
+create table if not exists public.satislar (
+  id bigint generated by default as identity primary key,
+  halci_id bigint references public.halciler(id) on delete cascade,
+  ciftci_id bigint references public.ciftciler(id) on delete set null,
+  urun_id bigint references public.urunler(id) on delete set null,
+  urun_adi text,
+  miktar numeric,
+  birim text,
+  fiyat numeric,
+  kalite text,
+  birim_fiyat numeric,
+  toplam_tutar numeric,
+  satis_tarihi date,
+  satis_saati text,
+  durum text,
+  alici_halci_id bigint references public.halciler(id) on delete set null,
+  alici_sirket_adi text,
+  fiyat_teklifi numeric,
+  satici_fiyati numeric,
+  sirket_adi text,
+  sirket_telefon text,
+  sirket_adres text,
+  sirket_vergi_no text,
+  tarih timestamptz default now()
+);
+
+create table if not exists public.talepler (
+  id bigint generated by default as identity primary key,
+  alici_halci_id bigint references public.halciler(id) on delete cascade,
+  alici_halci_ad_soyad text,
+  alici_sirket_adi text,
+  alici_sirket_telefon text,
+  alici_sirket_adres text,
+  alici_sirket_vergi_no text,
+  satici_halci_id bigint references public.halciler(id) on delete cascade,
+  satici_halci_ad_soyad text,
+  satici_sirket_adi text,
+  urun_id bigint references public.urunler(id) on delete set null,
+  urun_adi text,
+  urun_tipi text,
+  kalite text,
+  miktar numeric,
+  birim text,
+  birim_fiyat numeric,
+  fiyat_teklifi numeric,
+  toplam_tutar numeric,
+  notlar text,
+  durum text default 'Beklemede',
+  talep_tarihi date,
+  talep_saati text,
+  onay_tarihi date,
+  onay_saati text
+);
+
+create index if not exists idx_ciftciler_halci_id on public.ciftciler(halci_id);
+create index if not exists idx_urunler_ciftci_id on public.urunler(ciftci_id);
+create index if not exists idx_satislar_halci_id on public.satislar(halci_id);
+create index if not exists idx_talepler_satici_halci_id on public.talepler(satici_halci_id);
+create index if not exists idx_talepler_alici_halci_id on public.talepler(alici_halci_id);
+
+alter table public.halciler enable row level security;
+alter table public.ciftciler enable row level security;
+alter table public.urunler enable row level security;
+alter table public.satislar enable row level security;
+alter table public.talepler enable row level security;
+
+drop policy if exists "halciler_all" on public.halciler;
+drop policy if exists "ciftciler_all" on public.ciftciler;
+drop policy if exists "urunler_all" on public.urunler;
+drop policy if exists "satislar_all" on public.satislar;
+drop policy if exists "talepler_all" on public.talepler;
+
+create policy "halciler_all" on public.halciler for all using (true) with check (true);
+create policy "ciftciler_all" on public.ciftciler for all using (true) with check (true);
+create policy "urunler_all" on public.urunler for all using (true) with check (true);
+create policy "satislar_all" on public.satislar for all using (true) with check (true);
+create policy "talepler_all" on public.talepler for all using (true) with check (true);
+
+
+================================================================================
+  Son güncelleme: Hal Yönetim Sistemi — Supabase entegrasyonu
+================================================================================

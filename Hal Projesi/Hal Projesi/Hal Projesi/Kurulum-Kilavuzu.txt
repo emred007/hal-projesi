@@ -1,0 +1,368 @@
+================================================================================
+  HAL YÖNETİM SİSTEMİ — KURULUM KILAVUZU
+  Web Tabanlı Sebze-Meyve Hali Yönetim Uygulaması
+================================================================================
+
+
+1. GENEL BİLGİ
+--------------------------------------------------------------------------------
+
+Bu kılavuz, Hal Yönetim Sistemi'nin sıfırdan kurulumu, yapılandırılması
+ve çalıştırılması için adım adım talimatlar içerir.
+
+Proje türü     : Vue 3 Single Page Application (SPA)
+Veritabanı     : Supabase (PostgreSQL)
+Geliştirme port: 3000
+Erişim adresi  : http://localhost:3000
+
+
+2. SİSTEM GEREKSİNİMLERİ
+--------------------------------------------------------------------------------
+
+Donanım (minimum):
+  - İşlemci : 2 GHz çift çekirdek veya üzeri
+  - RAM     : 4 GB (8 GB önerilir)
+  - Disk    : 500 MB boş alan (node_modules dahil ~300 MB)
+
+Yazılım:
+  - İşletim sistemi : Windows 10/11, macOS veya Linux
+  - Node.js         : v18 veya üzeri (v20+ önerilir)
+  - npm             : v9 veya üzeri (Node.js ile birlikte gelir)
+  - Modern tarayıcı : Chrome, Firefox, Edge (güncel sürüm)
+  - İnternet        : Supabase bulut veritabanı bağlantısı için gerekli
+
+Node.js kurulumunu doğrulamak için terminal / PowerShell'de:
+
+  node -v
+  npm -v
+
+Örnek çıktı:
+  v20.x.x
+  10.x.x
+
+
+3. PROJE DOSYALARINI HAZIRLAMA
+--------------------------------------------------------------------------------
+
+Adım 3.1 — Proje klasörüne gidin
+
+  Windows (PowerShell):
+    cd "C:\Users\...\Hal Projesi"
+
+  macOS / Linux:
+    cd /path/to/Hal\ Projesi
+
+Adım 3.2 — Proje klasör yapısını kontrol edin
+
+  Hal Projesi/
+  ├── src/                  → Vue kaynak kodları
+  ├── supabase/             → SQL şema ve patch dosyaları
+  ├── scripts/              → Yardımcı scriptler
+  ├── package.json          → Bağımlılık tanımları
+  ├── vite.config.mjs       → Vite yapılandırması
+  ├── .env.example          → Ortam değişkeni şablonu
+  ├── db.json               → Örnek veri (seed kaynağı)
+  └── README.md
+
+
+4. BAĞIMLILIKLARI YÜKLEME
+--------------------------------------------------------------------------------
+
+Proje kök dizininde aşağıdaki komutu çalıştırın:
+
+  npm install
+
+Bu komut package.json dosyasındaki tüm bağımlılıkları indirir:
+  - vue, vuetify, vue-router, pinia
+  - @supabase/supabase-js
+  - vite ve geliştirme araçları
+
+Kurulum süresi internet hızına bağlı olarak 1–5 dakika sürebilir.
+
+Başarılı kurulum sonrası node_modules/ klasörü oluşur.
+
+
+5. SUPABASE VERİTABANI KURULUMU
+--------------------------------------------------------------------------------
+
+Adım 5.1 — Supabase hesabı oluşturun
+  1. https://supabase.com adresine gidin
+  2. Ücretsiz hesap oluşturun veya giriş yapın
+
+Adım 5.2 — Yeni proje oluşturun
+  1. "New Project" butonuna tıklayın
+  2. Proje adı girin (ör. hal-yonetim)
+  3. Veritabanı şifresi belirleyin (güvenli bir yerde saklayın)
+  4. Bölge seçin (ör. Europe — Stockholm)
+  5. Projenin hazır olmasını bekleyin (1–2 dakika)
+
+Adım 5.3 — Veritabanı şemasını oluşturun
+  1. Supabase Dashboard → sol menüden "SQL Editor" seçin
+  2. "New query" butonuna tıklayın
+  3. Hal Projesi/supabase/schema.sql dosyasının TAMAMINI kopyalayın
+  4. SQL editörüne yapıştırın
+  5. "Run" (veya Ctrl+Enter) ile çalıştırın
+  6. "Success" mesajını doğrulayın
+
+  Oluşturulan tablolar:
+    - halciler
+    - ciftciler
+    - urunler
+    - satislar
+    - talepler
+
+Adım 5.4 — API anahtarlarını alın
+  1. Supabase Dashboard → "Project Settings" (dişli ikon)
+  2. "API" sekmesine gidin
+  3. Aşağıdaki değerleri kopyalayın:
+     - Project URL        → VITE_SUPABASE_URL
+     - anon public key    → VITE_SUPABASE_ANON_KEY
+     - service_role key   → SUPABASE_SERVICE_ROLE_KEY (sadece seed için)
+
+  UYARI: service_role key gizli tutulmalıdır. Asla frontend koduna
+         veya GitHub'a eklemeyin.
+
+
+6. ORTAM DEĞİŞKENLERİ (.env) YAPILANDIRMASI
+--------------------------------------------------------------------------------
+
+Adım 6.1 — .env dosyası oluşturun
+
+  Proje kök dizininde .env.example dosyasını kopyalayarak .env oluşturun:
+
+  Windows (PowerShell):
+    Copy-Item .env.example .env
+
+  macOS / Linux:
+    cp .env.example .env
+
+Adım 6.2 — .env dosyasını düzenleyin
+
+  .env dosyasını metin editörü ile açın ve değerleri doldurun:
+
+  VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+  VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+  Notlar:
+  - VITE_ öneki zorunludur (Vite tarafından okunması için)
+  - SUPABASE_SERVICE_ROLE_KEY yalnızca npm run seed için gereklidir
+  - .env dosyası .gitignore içindedir; versiyon kontrolüne eklenmez
+
+Adım 6.3 — Ortam değişkenlerini doğrulayın
+
+  node scripts/check-supabase.mjs
+
+  Başarılı çıktı örneği:
+    SUPABASE_URL: https://xxxx.supabase.co
+    BAGLANTI: OK
+    TABLOLAR: {"halciler":0,"ciftciler":0,...}
+
+
+7. ÖRNEK VERİ AKTARIMI (İSTEĞE BAĞLI)
+--------------------------------------------------------------------------------
+
+Sistemi test etmek için db.json içindeki örnek verileri Supabase'e
+aktarmak isteyebilirsiniz.
+
+Ön koşul:
+  - schema.sql çalıştırılmış olmalı
+  - .env dosyasında SUPABASE_SERVICE_ROLE_KEY tanımlı olmalı
+
+Komut:
+  npm run seed
+
+Aktarılan tablolar:
+  - halciler, ciftciler, urunler, satislar, talepler
+
+Seed sonrası ID sayaçlarını düzeltmek için (yeni kayıt ekleme hatası
+olursa) Supabase SQL Editor'de şu dosyayı çalıştırın:
+
+  supabase/patch-reset-sequences.sql
+
+  veya tüm patch'leri tek seferde:
+
+  supabase/patch-all.sql
+
+Test giriş bilgileri (seed verisi ile):
+  E-posta : halci@example.com
+  Şifre   : halci123
+
+
+8. UYGULAMAYI ÇALIŞTIRMA (GELİŞTİRME MODU)
+--------------------------------------------------------------------------------
+
+Adım 8.1 — Geliştirme sunucusunu başlatın
+
+  npm run dev
+
+Adım 8.2 — Tarayıcıda açın
+
+  http://localhost:3000
+
+Adım 8.3 — Giriş yapın
+  - Kayıtlı hesabınız varsa e-posta ve şifre ile giriş yapın
+  - Hesabınız yoksa "Kayıt Ol" linkinden yeni halci kaydı oluşturun
+
+Sunucuyu durdurmak için terminalde: Ctrl + C
+
+
+9. ÜRETİM (PRODUCTION) DERLEMESİ
+--------------------------------------------------------------------------------
+
+Adım 9.1 — Production build oluşturun
+
+  npm run build
+
+  Çıktı: dist/ klasörü (statik HTML, CSS, JS dosyaları)
+
+Adım 9.2 — Build'i yerel olarak önizleyin
+
+  npm run preview
+
+Adım 9.3 — Dağıtım
+  dist/ klasörünü aşağıdaki platformlardan birine yükleyebilirsiniz:
+    - Vercel
+    - Netlify
+    - GitHub Pages
+    - Nginx / Apache sunucu
+
+  Not: Dağıtım ortamında da VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY
+       ortam değişkenlerinin tanımlı olması gerekir.
+
+
+10. KULLANILABİLİR NPM KOMUTLARI
+--------------------------------------------------------------------------------
+
+Komut              | Açıklama
+-------------------|--------------------------------------------------
+npm install        | Bağımlılıkları yükler
+npm run dev        | Geliştirme sunucusunu başlatır (port 3000)
+npm run build      | Production derlemesi oluşturur
+npm run preview    | Build çıktısını yerel önizler
+npm run seed       | db.json verilerini Supabase'e aktarır
+npm run server     | Eski JSON Server (artık gerekli değil, port 3001)
+
+Yardımcı scriptler (node ile doğrudan çalıştırılır):
+
+  node scripts/check-supabase.mjs      → Bağlantı ve tablo kontrolü
+  node scripts/test-ciftci-create.mjs  → Çiftçi ekleme testi
+  node scripts/apply-patch.mjs         → Patch uygulama
+  node scripts/apply-reset-sequences.mjs → ID sayacı düzeltme
+
+
+11. KURULUM SONRASI DOĞRULAMA KONTROL LİSTESİ
+--------------------------------------------------------------------------------
+
+  [ ] node -v ve npm -v komutları çalışıyor
+  [ ] npm install hatasız tamamlandı
+  [ ] Supabase projesi oluşturuldu
+  [ ] schema.sql SQL Editor'de başarıyla çalıştırıldı
+  [ ] .env dosyası oluşturuldu ve anahtarlar girildi
+  [ ] node scripts/check-supabase.mjs → BAGLANTI: OK
+  [ ] npm run dev → http://localhost:3000 açılıyor
+  [ ] Giriş / kayıt sayfası görüntüleniyor
+  [ ] (Opsiyonel) npm run seed → örnek veriler yüklendi
+  [ ] (Opsiyonel) halci@example.com ile giriş yapılabiliyor
+  [ ] Çiftçi ekleme, ürün ekleme, stok görüntüleme çalışıyor
+
+
+12. SIK KARŞILAŞILAN SORUNLAR VE ÇÖZÜMLER
+--------------------------------------------------------------------------------
+
+Sorun: "Supabase yapılandırması eksik" uyarısı
+Çözüm:
+  - .env dosyasının proje kökünde olduğunu kontrol edin
+  - VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY değerlerini doğrulayın
+  - npm run dev komutunu yeniden başlatın (.env değişiklikleri için gerekli)
+
+Sorun: "Failed to fetch" / bağlantı hatası
+Çözüm:
+  - İnternet bağlantınızı kontrol edin
+  - Supabase proje URL'sinin doğru olduğundan emin olun
+  - Supabase Dashboard'da projenin aktif (paused değil) olduğunu kontrol edin
+
+Sorun: Tablo bulunamadı / relation does not exist
+Çözüm:
+  - schema.sql dosyasını Supabase SQL Editor'de çalıştırın
+  - Table Editor'den tabloların oluştuğunu doğrulayın
+
+Sorun: Yeni çiftçi veya ürün eklenemiyor (duplicate key)
+Çözüm:
+  - Seed sonrası ID sayacı bozulmuş olabilir
+  - supabase/patch-reset-sequences.sql dosyasını SQL Editor'de çalıştırın
+
+Sorun: Ürün eklerken tarih hatası
+Çözüm:
+  - Son kullanma tarihi boş bırakılabilir (sistem null'a çevirir)
+  - Güncel src/utils/dbMapping.js dosyasının projede olduğundan emin olun
+
+Sorun: Talep gönderilemiyor veya onaylanamıyor
+Çözüm:
+  - Eski kurulumlarda eksik sütunlar olabilir
+  - supabase/patch-all.sql dosyasını SQL Editor'de bir kez çalıştırın
+
+Sorun: schema.sql tekrar çalıştırıldığında policy hatası
+Çözüm:
+  - "policy already exists" hatası normaldir; tablolar zaten mevcuttur
+  - Güncel schema.sql drop policy if exists içerir; yine de hata alırsanız
+    yalnızca patch dosyalarını çalıştırın
+
+Sorun: Port 3000 kullanımda
+Çözüm:
+  - Başka bir Vite/Node sürecini kapatın
+  - vite.config.mjs içinde server.port değerini değiştirebilirsiniz
+
+Sorun: npm install sırasında hata
+Çözüm:
+  - Node.js sürümünüzü güncelleyin (v18+)
+  - node_modules klasörünü silip tekrar deneyin:
+      Remove-Item -Recurse -Force node_modules   (Windows)
+      rm -rf node_modules                        (macOS/Linux)
+      npm install
+
+
+13. GÜVENLİK NOTLARI
+--------------------------------------------------------------------------------
+
+  - .env dosyasını asla GitHub veya herkese açık repolara yüklemeyin
+  - SUPABASE_SERVICE_ROLE_KEY yalnızca sunucu tarafı / script kullanımı içindir
+  - Geliştirme ortamında RLS politikaları açıktır (using true)
+  - Üretim ortamında Supabase Auth ve sıkı RLS politikaları kullanılmalıdır
+  - Şifreler veritabanında düz metin saklanır; üretimde hash kullanılmalıdır
+
+
+14. İLGİLİ DOSYALAR
+--------------------------------------------------------------------------------
+
+Dosya                              | Açıklama
+-----------------------------------|------------------------------------------
+.env.example                       | Ortam değişkeni şablonu
+supabase/schema.sql                | Ana veritabanı şeması
+supabase/patch-all.sql             | Tüm patch'ler (tek seferde)
+supabase/patch-satis.sql           | Satış tablosu ek sütunları
+supabase/patch-talepler.sql        | Talep tablosu ek sütunları
+supabase/patch-reset-sequences.sql | ID sayacı düzeltme
+Veritabani-Semasi.txt              | Veritabanı şema dokümantasyonu
+AGENTS.md                          | Proje raporu bağlam dosyası
+README.md                          | Kısa proje özeti
+
+
+15. HIZLI KURULUM ÖZETİ (TEK SAYFA)
+--------------------------------------------------------------------------------
+
+  1. cd "Hal Projesi"
+  2. npm install
+  3. supabase.com → yeni proje oluştur
+  4. SQL Editor → schema.sql çalıştır
+  5. Copy-Item .env.example .env  → anahtarları doldur
+  6. node scripts/check-supabase.mjs   (bağlantı test)
+  7. npm run seed                      (opsiyonel örnek veri)
+  8. npm run dev
+  9. http://localhost:3000 → giriş yap
+
+
+================================================================================
+  Hal Yönetim Sistemi — Kurulum Kılavuzu
+  Destek dosyaları: Veritabani-Semasi.txt, AGENTS.md, README.md
+================================================================================

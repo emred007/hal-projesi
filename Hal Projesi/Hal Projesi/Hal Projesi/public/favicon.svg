@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favWallet" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A0522D;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="favInside" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F5DEB3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFF8DC;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Arka plan -->
+  <circle cx="32" cy="32" r="30" fill="#FF9800"/>
+  
+  <!-- Cüzdan -->
+  <rect x="12" y="18" width="40" height="28" rx="3" fill="url(#favWallet)" stroke="#654321" stroke-width="2"/>
+  <rect x="15" y="24" width="34" height="20" rx="2" fill="url(#favInside)" opacity="0.9"/>
+  <line x1="12" y1="24" x2="52" y2="24" stroke="#654321" stroke-width="1.5"/>
+  
+  <!-- Boş cüzdan işareti -->
+  <circle cx="32" cy="34" r="6" fill="none" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="1,1" opacity="0.7"/>
+  <text x="32" y="37" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#FF6B6B" text-anchor="middle" opacity="0.8">?</text>
+  
+  <!-- Altın para -->
+  <circle cx="32" cy="48" r="6" fill="#FFD700" stroke="#FFA500" stroke-width="1.5"/>
+  <text x="32" y="51" font-family="Arial, sans-serif" font-size="8" font-weight="900" fill="#FFFFFF" text-anchor="middle">₺</text>
+</svg>
+

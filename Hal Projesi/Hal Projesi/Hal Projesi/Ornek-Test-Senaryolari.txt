@@ -1,0 +1,842 @@
+================================================================================
+  HAL YÖNETİM SİSTEMİ — ÖRNEK TEST SENARYOLARI
+  Manuel Test Dokümantasyonu
+================================================================================
+
+
+1. GENEL BİLGİ
+--------------------------------------------------------------------------------
+
+Doküman amacı  : Hal Yönetim Sistemi için manuel test senaryolarını tanımlamak
+Test ortamı    : http://localhost:3000
+Veritabanı     : Supabase PostgreSQL
+Tarayıcı       : Chrome / Edge / Firefox (güncel sürüm)
+
+Ön koşul (genel):
+  - npm install tamamlanmış olmalı
+  - .env dosyası yapılandırılmış olmalı
+  - schema.sql Supabase'de çalıştırılmış olmalı
+  - npm run dev ile uygulama çalışıyor olmalı
+
+Test verisi (seed yüklüyse):
+  E-posta : halci@example.com
+  Şifre   : halci123
+
+
+2. TEST SENARYOSU FORMATI
+--------------------------------------------------------------------------------
+
+Her senaryo şu alanları içerir:
+  - Senaryo No   : TS-XXX
+  - Modül        : Test edilen bileşen
+  - Öncelik      : Yüksek / Orta / Düşük
+  - Ön Koşul     : Test öncesi gerekli durum
+  - Adımlar      : Sıralı test adımları
+  - Beklenen     : Başarı kriteri
+  - Test Verisi  : (varsa) kullanılacak örnek veriler
+
+
+================================================================================
+  BÖLÜM A — KİMLİK DOĞRULAMA (AUTH)
+================================================================================
+
+
+TS-001 | Halci Kayıt — Başarılı
+--------------------------------------------------------------------------------
+Modül     : Register.vue
+Öncelik   : Yüksek
+Ön Koşul  : Kullanıcı giriş yapmamış, /register sayfası açık
+
+Adımlar:
+  1. Kayıt formunu aç (http://localhost:3000/register)
+  2. Ad: Ahmet, Soyad: Yılmaz gir
+  3. Email: ahmet.yilmaz@test.com gir
+  4. Vergi No: 1234567890 gir
+  5. Telefon: 05321234567 gir
+  6. Şirket Adı: Yılmaz Hal Ticaret gir
+  7. Adres bilgisi gir
+  8. Şifre: test123456, Şifre Tekrar: test123456 gir
+  9. "Kayıt Ol" butonuna tıkla
+
+Beklenen:
+  - Kayıt başarılı mesajı veya ana sayfaya yönlendirme
+  - Kullanıcı otomatik giriş yapmış olmalı
+  - Ana sayfada halci adı görünmeli
+
+Test Verisi:
+  Email         : ahmet.yilmaz@test.com
+  Şifre         : test123456
+  Vergi No      : 1234567890
+
+
+TS-002 | Halci Kayıt — Mükerrer Email
+--------------------------------------------------------------------------------
+Modül     : Register.vue
+Öncelik   : Yüksek
+Ön Koşul  : halci@example.com email'i veritabanında kayıtlı
+
+Adımlar:
+  1. Kayıt formunu aç
+  2. Email alanına halci@example.com gir
+  3. Diğer zorunlu alanları doldur
+  4. "Kayıt Ol" butonuna tıkla
+
+Beklenen:
+  - "Bu email adresi zaten kullanılıyor" benzeri hata mesajı
+  - Kayıt oluşturulmamalı
+
+
+TS-003 | Halci Kayıt — Şifre Eşleşmiyor
+--------------------------------------------------------------------------------
+Modül     : Register.vue
+Öncelik   : Orta
+Ön Koşul  : /register sayfası açık
+
+Adımlar:
+  1. Şifre: abc123456 gir
+  2. Şifre Tekrar: farklı123 gir
+  3. Diğer alanları doldur
+  4. "Kayıt Ol" butonuna tıkla
+
+Beklenen:
+  - "Şifreler eşleşmiyor" validasyon mesajı
+  - Form gönderilmemeli
+
+
+TS-004 | Halci Kayıt — Vergi No Harf Girişi
+--------------------------------------------------------------------------------
+Modül     : Register.vue
+Öncelik   : Orta
+Ön Koşul  : /register sayfası açık
+
+Adımlar:
+  1. Vergi Numarası alanına "12AB567890" gir
+
+Beklenen:
+  - Harfler kabul edilmemeli veya validasyon hatası gösterilmeli
+  - Yalnızca rakam girişi sağlanmalı
+
+
+TS-005 | Halci Giriş — Başarılı
+--------------------------------------------------------------------------------
+Modül     : Login.vue
+Öncelik   : Yüksek
+Ön Koşul  : Seed verisi yüklü veya kayıtlı kullanıcı mevcut
+
+Adımlar:
+  1. http://localhost:3000/login adresine git
+  2. Email: halci@example.com gir
+  3. Şifre: halci123 gir
+  4. "Giriş Yap" butonuna tıkla
+
+Beklenen:
+  - Ana sayfaya (/) yönlendirme
+  - Halci adı ve şirket adı üst bölümde görünmeli
+  - Çiftçi listesi yüklenmeli
+
+
+TS-006 | Halci Giriş — Hatalı Şifre
+--------------------------------------------------------------------------------
+Modül     : Login.vue
+Öncelik   : Yüksek
+Ön Koşul  : halci@example.com kayıtlı
+
+Adımlar:
+  1. Email: halci@example.com gir
+  2. Şifre: yanlisSifre123 gir
+  3. "Giriş Yap" butonuna tıkla
+
+Beklenen:
+  - "Email veya şifre hatalı" benzeri hata mesajı
+  - Login sayfasında kalınmalı
+
+
+TS-007 | Halci Giriş — Boş Alan
+--------------------------------------------------------------------------------
+Modül     : Login.vue
+Öncelik   : Orta
+Ön Koşul  : /login sayfası açık
+
+Adımlar:
+  1. Email ve şifre alanlarını boş bırak
+  2. "Giriş Yap" butonuna tıkla
+
+Beklenen:
+  - "Bu alan zorunludur" validasyon mesajları
+  - Giriş yapılmamalı
+
+
+TS-008 | Oturum Hatırlama — Sayfa Yenileme
+--------------------------------------------------------------------------------
+Modül     : auth.js / localStorage
+Öncelik   : Yüksek
+Ön Koşul  : Kullanıcı giriş yapmış
+
+Adımlar:
+  1. Başarılı giriş yap
+  2. Ana sayfada olduğunu doğrula
+  3. Tarayıcıyı yenile (F5)
+
+Beklenen:
+  - Kullanıcı login sayfasına atılmamalı
+  - Oturum devam etmeli, ana sayfa görünmeli
+
+
+TS-009 | Çıkış Yap
+--------------------------------------------------------------------------------
+Modül     : Home.vue / auth.js
+Öncelik   : Yüksek
+Ön Koşul  : Kullanıcı giriş yapmış
+
+Adımlar:
+  1. Ana sayfada "Çıkış Yap" butonuna tıkla
+
+Beklenen:
+  - Login sayfasına yönlendirme
+  - localStorage oturum bilgileri temizlenmeli
+  - / adresine gidildiğinde login'e yönlendirilmeli
+
+
+TS-010 | Yetkisiz Erişim — Route Guard
+--------------------------------------------------------------------------------
+Modül     : router/index.js
+Öncelik   : Yüksek
+Ön Koşul  : Kullanıcı giriş yapmamış
+
+Adımlar:
+  1. Tarayıcı adres çubuğuna http://localhost:3000/ yaz
+
+Beklenen:
+  - Otomatik olarak /login sayfasına yönlendirme
+
+
+================================================================================
+  BÖLÜM B — ÇİFTÇİ YÖNETİMİ
+================================================================================
+
+
+TS-011 | Yeni Çiftçi Ekleme — Başarılı
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : Halci giriş yapmış
+
+Adımlar:
+  1. Ana sayfada "Yeni Çiftçi Ekle" butonuna tıkla
+  2. Ad Soyad: Mehmet Demir
+  3. Telefon: 05339876543
+  4. TC Kimlik: 12345678901
+  5. Adres: Antalya / Kepez
+  6. Notlar: Organik üretici
+  7. "Kaydet" butonuna tıkla
+
+Beklenen:
+  - Dialog kapanmalı
+  - Çiftçi listesinde "Mehmet Demir" görünmeli
+  - Supabase ciftciler tablosuna kayıt eklenmeli
+
+
+TS-012 | Çiftçi Ekleme — TC Kimlik Harf Girişi
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Orta
+Ön Koşul  : Çiftçi ekleme dialogu açık
+
+Adımlar:
+  1. TC Kimlik alanına "12345ABC901" gir
+
+Beklenen:
+  - Harf kabul edilmemeli veya validasyon hatası gösterilmeli
+
+
+TS-013 | Çiftçi Detay Sayfasına Gitme
+--------------------------------------------------------------------------------
+Modül     : Home.vue / CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : En az bir çiftçi kayıtlı
+
+Adımlar:
+  1. Ana sayfada bir çiftçi kartına tıkla
+
+Beklenen:
+  - /ciftci/{id} adresine yönlendirme
+  - Çiftçi adı, telefon, TC, adres bilgileri görünmeli
+  - Ürünler bölümü yüklenmeli
+
+
+TS-014 | Çiftçi Bilgilerini Düzenleme
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : Çiftçi detay sayfası açık
+
+Adımlar:
+  1. "Bilgileri Düzenle" butonuna tıkla
+  2. Telefon numarasını değiştir
+  3. "Kaydet" butonuna tıkla
+
+Beklenen:
+  - Güncellenmiş telefon profil kartında görünmeli
+  - Veritabanında ciftciler kaydı güncellenmeli
+
+
+TS-015 | Çiftçi Silme
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : Test amaçlı çiftçi mevcut (ürünleri olabilir)
+
+Adımlar:
+  1. Çiftçi detay sayfasında silme işlemini başlat
+  2. Onay dialogunda "Evet" de
+
+Beklenen:
+  - Çiftçi silinmeli
+  - Bağlı ürünler cascade ile silinmeli (urunler tablosu)
+  - Ana sayfaya yönlendirme veya liste güncellenmeli
+
+
+================================================================================
+  BÖLÜM C — ÜRÜN YÖNETİMİ
+================================================================================
+
+
+TS-016 | Yeni Ürün Ekleme — Başarılı
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : Çiftçi detay sayfası açık
+
+Adımlar:
+  1. "Ürün Ekle" butonuna tıkla
+  2. Ürün Adı: Domates (autocomplete'den seç)
+  3. Ürün Tipi: Sebze
+  4. Miktar: 100, Birim: kg
+  5. Fiyat: 25.50
+  6. Kalite: A Sınıfı
+  7. Geliş Tarihi: bugün
+  8. Son Kullanım Tarihi: boş bırak
+  9. Durum: Beklemede
+  10. "Kaydet" butonuna tıkla
+
+Beklenen:
+  - Ürün listesinde Domates kartı görünmeli
+  - urunler tablosuna kayıt eklenmeli
+  - Boş SKT null olarak kaydedilmeli (hata olmamalı)
+
+
+TS-017 | Ürün Ekleme — SKT Dolu
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Orta
+Ön Koşul  : Ürün ekleme dialogu açık
+
+Adımlar:
+  1. Son Kullanım Tarihi: gelecek bir tarih seç
+  2. Diğer zorunlu alanları doldur
+  3. Kaydet
+
+Beklenen:
+  - Ürün başarıyla kaydedilmeli
+  - SKT ürün kartında görünmeli
+
+
+TS-018 | Ürün Düzenleme
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : En az bir ürün kayıtlı
+
+Adımlar:
+  1. Ürün kartında düzenle butonuna tıkla
+  2. Miktarı 150 olarak güncelle
+  3. Kaydet
+
+Beklenen:
+  - Güncellenmiş miktar kartta görünmeli
+  - urunler tablosu güncellenmeli
+
+
+TS-019 | Ürün Silme
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Yüksek
+Ön Koşul  : Silinecek test ürünü mevcut
+
+Adımlar:
+  1. Ürün kartında sil butonuna tıkla
+  2. Onay ver
+
+Beklenen:
+  - Ürün listeden kalkmalı
+  - urunler tablosundan silinmeli
+
+
+TS-020 | Ürün Durumu Görüntüleme
+--------------------------------------------------------------------------------
+Modül     : CiftciDetail.vue
+Öncelik   : Düşük
+Ön Koşul  : Farklı durumlarda ürünler mevcut
+
+Adımlar:
+  1. Beklemede, Onaylandı, Tedarik Edildi durumlu ürünleri incele
+
+Beklenen:
+  - Her durum için renkli chip/badge görünmeli
+  - Durum metni doğru olmalı
+
+
+================================================================================
+  BÖLÜM D — STOK YÖNETİMİ
+================================================================================
+
+
+TS-021 | Stok Listesi Görüntüleme
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : Halci'ye ait en az bir ürün kayıtlı
+
+Adımlar:
+  1. Ana sayfada "Stok" butonuna tıkla
+
+Beklenen:
+  - Ürün adı + kalite bazında konsolide stok listesi görünmeli
+  - Toplam miktar doğru hesaplanmalı
+  - Sebze/Meyve ikonları doğru renkte olmalı
+
+
+TS-022 | Stok Detay / Fiş Görüntüleme
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Orta
+Ön Koşul  : Stok dialogu açık, birden fazla çiftçiden aynı ürün var
+
+Adımlar:
+  1. Stok listesinde bir kalemin fiş/detay butonuna tıkla
+
+Beklenen:
+  - Ürünün hangi çiftçilerden ne kadar geldiği listelenmeli
+  - Çiftçi adı, miktar, birim, fiyat bilgileri görünmeli
+
+
+TS-023 | Stok — Boş Durum
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Düşük
+Ön Koşul  : Hiç ürün kaydı olmayan yeni halci hesabı
+
+Adımlar:
+  1. "Stok" butonuna tıkla
+
+Beklenen:
+  - "Stok bulunamadı" veya boş liste mesajı görünmeli
+  - Uygulama hata vermemeli
+
+
+================================================================================
+  BÖLÜM E — SATIŞ İŞLEMLERİ
+================================================================================
+
+
+TS-024 | Satış Yapma — Başarılı
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : Stokta yeterli ürün mevcut
+
+Adımlar:
+  1. Stok dialogunu aç
+  2. Bir stok kaleminde "Satış Yap" butonuna tıkla
+  3. Miktar: 10 gir
+  4. Fiyat: 30 gir
+  5. Alıcı firma bilgilerini doldur (unvan, telefon, adres, vergi no)
+  6. "Satış Yap" butonuna tıkla
+
+Beklenen:
+  - Satış dialogu kapanmalı
+  - satislar tablosuna yeni kayıt eklenmeli
+  - Stok listesi güncellenmeli
+
+
+TS-025 | Satış — Geçersiz Miktar (Sıfır)
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Orta
+Ön Koşul  : Satış dialogu açık
+
+Adımlar:
+  1. Miktar alanına 0 veya boş değer gir
+  2. Satış yapmayı dene
+
+Beklenen:
+  - Validasyon hatası veya buton devre dışı olmalı
+  - Satış kaydı oluşturulmamalı
+
+
+TS-026 | Geçmiş Satışları Görüntüleme
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : En az bir satış kaydı mevcut
+
+Adımlar:
+  1. "Geçmiş Satışlar" butonuna tıkla
+
+Beklenen:
+  - Satış tablosu görünmeli
+  - Ürün adı, miktar, birim, fiyat, tarih sütunları dolu olmalı
+  - Kayıtlar tarih sırasına göre listelenmeli
+
+
+TS-027 | Fatura İndirme
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : Geçmiş satışlar dialogu açık
+
+Adımlar:
+  1. Bir satış satırında "Fatura İndir" butonuna tıkla
+
+Beklenen:
+  - .doc dosyası indirilmeli
+  - Faturada satıcı (halci) bilgileri görünmeli
+  - Alıcı firma bilgileri görünmeli
+  - Ürün adı, miktar, birim fiyat, toplam tutar doğru olmalı
+  - Tek sayfa kompakt düzen olmalı
+
+
+TS-028 | Fatura — Toplam Tutar Doğruluğu (Talep Onaylı Satış)
+--------------------------------------------------------------------------------
+Modül     : Home.vue / App.vue
+Öncelik   : Yüksek
+Ön Koşul  : Talep onayı ile oluşmuş satış kaydı mevcut
+
+Adımlar:
+  1. Geçmiş satışlarda talep onayından gelen satışı bul
+  2. Fatura indir
+  3. birimFiyat ve toplamTutar alanlarını kontrol et
+
+Beklenen:
+  - Toplam tutar = miktar × birim fiyat olmalı
+  - Fiyat alanı boş görünmemeli
+
+
+================================================================================
+  BÖLÜM F — HALCİ-HALCİ TALEP (B2B SATIN ALMA)
+================================================================================
+
+
+TS-029 | Ürün Satın Alma Talebi Gönderme — Başarılı
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Yüksek
+Ön Koşul  : En az 2 halci hesabı; satıcı halci stoğunda ürün var
+
+Adımlar:
+  1. Alıcı halci olarak giriş yap (Halci A)
+  2. "Ürün Satın Al" butonuna tıkla
+  3. Ürün adı ve kalite seç (ör. Domates, A Sınıfı)
+  4. Stoklu satıcı halciyi listeden seç (Halci B)
+  5. Miktar: 5, Fiyat Teklifi: 20 gir
+  6. Talebi gönder
+
+Beklenen:
+  - "Talebiniz başarıyla gönderildi" mesajı
+  - talepler tablosuna durum=Beklemede kayıt eklenmeli
+
+
+TS-030 | Talep — Stoktan Fazla Miktar
+--------------------------------------------------------------------------------
+Modül     : Home.vue
+Öncelik   : Orta
+Ön Koşul  : Satıcı stoğu 10 kg
+
+Adımlar:
+  1. Talep miktarına 50 gir
+  2. Göndermeyi dene
+
+Beklenen:
+  - "Talep miktarı mevcut stoktan fazla olamaz" uyarısı
+  - Talep oluşturulmamalı
+
+
+TS-031 | Gelen Talep Bildirimi
+--------------------------------------------------------------------------------
+Modül     : App.vue
+Öncelik   : Yüksek
+Ön Koşul  : Satıcı halciye bekleyen talep gönderilmiş
+
+Adımlar:
+  1. Satıcı halci (Halci B) olarak giriş yap
+  2. Üst menüdeki bildirim (çan) ikonuna tıkla
+
+Beklenen:
+  - Badge'de bekleyen talep sayısı görünmeli
+  - Talep listesinde ürün adı, miktar, fiyat teklifi görünmeli
+  - Alıcı şirket bilgileri detayda görünmeli
+
+
+TS-032 | Talep Onaylama — Başarılı
+--------------------------------------------------------------------------------
+Modül     : App.vue
+Öncelik   : Yüksek
+Ön Koşul  : Satıcı halciye bekleyen talep var, yeterli stok mevcut
+
+Adımlar:
+  1. Bildirim menüsünden talebi aç
+  2. "Onayla" butonuna tıkla
+
+Beklenen:
+  - Talep durumu "Onaylandı" olmalı
+  - satislar tablosuna satış kaydı eklenmeli
+  - Satıcı ürün miktarından düşülmeli
+  - Alıcı halcinin "Stok Yönetimi" çiftçisine ürün eklenmeli
+  - Başarı mesajı gösterilmeli
+
+
+TS-033 | Talep Onaylama — Yetersiz Stok
+--------------------------------------------------------------------------------
+Modül     : App.vue
+Öncelik   : Orta
+Ön Koşul  : Talep miktarı > mevcut ürün miktarı (manuel DB düzenlemesi veya senaryo)
+
+Adımlar:
+  1. Yetersiz stoklu talebi onaylamayı dene
+
+Beklenen:
+  - "Yeterli stok bulunmamaktadır" uyarısı
+  - Onay işlemi gerçekleşmemeli
+
+
+TS-034 | Talep Reddetme
+--------------------------------------------------------------------------------
+Modül     : App.vue
+Öncelik   : Yüksek
+Ön Koşul  : Bekleyen talep mevcut
+
+Adımlar:
+  1. Bildirim menüsünden talebi aç
+  2. "Reddet" butonuna tıkla
+  3. Onay dialogunda evet de
+
+Beklenen:
+  - Talep durumu "Reddedildi" olmalı
+  - Stok ve satış tabloları değişmemeli
+  - Bildirim listesinden kalkmalı
+
+
+TS-035 | Bildirim Otomatik Yenileme
+--------------------------------------------------------------------------------
+Modül     : App.vue
+Öncelik   : Düşük
+Ön Koşul  : Satıcı halci giriş yapmış
+
+Adımlar:
+  1. Başka oturumdan (veya DB'den) yeni talep oluştur
+  2. 30 saniye bekle veya yenile butonuna tıkla
+
+Beklenen:
+  - Yeni talep bildirim listesinde görünmeli
+
+
+================================================================================
+  BÖLÜM G — VERİTABANI VE API
+================================================================================
+
+
+TS-036 | Supabase Bağlantı Kontrolü
+--------------------------------------------------------------------------------
+Modül     : scripts/check-supabase.mjs
+Öncelik   : Yüksek
+Ön Koşul  : .env yapılandırılmış
+
+Adımlar:
+  1. Terminalde: node scripts/check-supabase.mjs
+
+Beklenen:
+  - BAGLANTI: OK
+  - 5 tablo için kayıt sayıları görünmeli
+  - TEST_HALCI bilgisi (seed varsa)
+
+
+TS-037 | .env Eksik — Hata Mesajı
+--------------------------------------------------------------------------------
+Modül     : lib/supabase.js / api.js
+Öncelik   : Orta
+Ön Koşul  : .env dosyası yok veya anahtarlar boş
+
+Adımlar:
+  1. .env dosyasını geçici olarak yeniden adlandır
+  2. Uygulamayı başlat ve veri işlemi dene
+
+Beklenen:
+  - "Supabase yapılandırması eksik" uyarı/hatası
+  - Anlamlı Türkçe hata mesajı
+
+
+TS-038 | Yeni Kayıt ID Sırası (Sequence)
+--------------------------------------------------------------------------------
+Modül     : ciftciler / urunler
+Öncelik   : Yüksek
+Ön Koşul  : Seed verisi yüklenmiş
+
+Adımlar:
+  1. Yeni çiftçi ekle
+  2. Yeni ürün ekle
+
+Beklenen:
+  - Duplicate key hatası OLMAMALI
+  - Kayıtlar başarıyla oluşturulmalı
+
+Not:
+  - Hata alınırsa patch-reset-sequences.sql çalıştırılmalı
+
+
+================================================================================
+  BÖLÜM H — ARAYÜZ VE KULLANILABILIRLIK
+================================================================================
+
+
+TS-039 | Responsive Tasarım — Mobil Görünüm
+--------------------------------------------------------------------------------
+Modül     : Tüm sayfalar
+Öncelik   : Orta
+Ön Koşul  : Uygulama çalışıyor
+
+Adımlar:
+  1. Tarayıcı geliştirici araçlarını aç (F12)
+  2. Mobil görünüm (375px genişlik) seç
+  3. Ana sayfa, çiftçi detay, login sayfalarını gez
+
+Beklenen:
+  - Layout bozulmamalı
+  - Butonlar ve formlar kullanılabilir olmalı
+  - Vuetify grid düzgün çalışmalı
+
+
+TS-040 | Türkçe Karakter Desteği
+--------------------------------------------------------------------------------
+Modül     : Tüm formlar
+Öncelik   : Orta
+Ön Koşul  : Giriş yapılmış
+
+Adımlar:
+  1. Çiftçi adı: "Öztürk Şanlı" gir
+  2. Kaydet ve listele
+
+Beklenen:
+  - Türkçe karakterler (ö, ü, ş, ı, ç, ğ) doğru görünmeli
+  - Büyük/küçük harf formatlaması bozulmamalı
+
+
+TS-041 | Yükleme Göstergeleri
+--------------------------------------------------------------------------------
+Modül     : Home.vue / CiftciDetail.vue
+Öncelik   : Düşük
+Ön Koşul  : Yavaş ağ simülasyonu (opsiyonel)
+
+Adımlar:
+  1. Ana sayfayı aç
+  2. Stok ve geçmiş satış dialoglarını aç
+
+Beklenen:
+  - Veri yüklenirken progress/spinner görünmeli
+  - Yükleme bitince içerik gösterilmeli
+
+
+TS-042 | 404 Yönlendirme
+--------------------------------------------------------------------------------
+Modül     : router/index.js
+Öncelik   : Düşük
+Ön Koşul  : Giriş yapılmış
+
+Adımlar:
+  1. http://localhost:3000/olmayan-sayfa adresine git
+
+Beklenen:
+  - Ana sayfaya (/) yönlendirme
+
+
+================================================================================
+  BÖLÜM I — ÜRETİM DERLEMESİ
+================================================================================
+
+
+TS-043 | Production Build
+--------------------------------------------------------------------------------
+Modül     : Vite build
+Öncelik   : Yüksek
+Ön Koşul  : npm install tamamlanmış
+
+Adımlar:
+  1. Terminalde: npm run build
+
+Beklenen:
+  - Build hatasız tamamlanmalı
+  - dist/ klasörü oluşmalı
+  - index.html ve assets/ dosyaları üretilmeli
+
+
+TS-044 | Build Önizleme
+--------------------------------------------------------------------------------
+Modül     : vite preview
+Öncelik   : Orta
+Ön Koşul  : npm run build tamamlanmış
+
+Adımlar:
+  1. npm run preview
+  2. Verilen URL'yi tarayıcıda aç
+
+Beklenen:
+  - Uygulama production build ile çalışmalı
+  - Temel sayfalar (login, ana sayfa) açılmalı
+
+
+================================================================================
+  BÖLÜM J — TEST SONUÇ TABLOSU (ŞABLON)
+================================================================================
+
+Aşağıdaki tablo test oturumunda doldurulabilir:
+
+Senaryo No | Modül        | Sonuç (G/B) | Tarih      | Test Eden | Not
+-----------|--------------|-------------|------------|-----------|--------
+TS-001     | Register     |             |            |           |
+TS-005     | Login        |             |            |           |
+TS-011     | Çiftçi       |             |            |           |
+TS-016     | Ürün         |             |            |           |
+TS-021     | Stok         |             |            |           |
+TS-024     | Satış        |             |            |           |
+TS-027     | Fatura       |             |            |           |
+TS-029     | Talep        |             |            |           |
+TS-032     | Talep Onay   |             |            |           |
+TS-036     | API          |             |            |           |
+TS-043     | Build        |             |            |           |
+
+G = Geçti (Passed)    B = Başarısız (Failed)
+
+
+================================================================================
+  BÖLÜM K — ÖNCELİKLİ SMOKE TEST PAKETİ (HIZLI KONTROL)
+================================================================================
+
+Sunum veya teslim öncesi minimum 10 senaryo:
+
+  1. TS-005  — Giriş yap
+  2. TS-011  — Çiftçi ekle
+  3. TS-016  — Ürün ekle
+  4. TS-021  — Stok görüntüle
+  5. TS-024  — Satış yap
+  6. TS-026  — Geçmiş satışları gör
+  7. TS-027  — Fatura indir
+  8. TS-029  — Talep gönder (2 halci gerekli)
+  9. TS-032  — Talep onayla
+  10. TS-009 — Çıkış yap
+
+Tahmini süre: 20–30 dakika
+
+
+================================================================================
+  Hal Yönetim Sistemi — Örnek Test Senaryoları
+  İlgili dosyalar: Kurulum-Kilavuzu.txt, Veritabani-Semasi.txt, AGENTS.md
+================================================================================
